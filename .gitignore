@@ -3,5 +3,14 @@
 *.pyc
 *.pyo
 *.egg-info/
-data/
+# Keep raw data and intermediate outputs local.
+/data/*
+!/data/model/
+!/data/evaluation/
+
+# Keep final forecast fields and indices; ignore training artifacts.
+/data/model/*
+!/data/model/forecasts.nc
+!/data/model/forecast_indices.csv
+
 update.sh

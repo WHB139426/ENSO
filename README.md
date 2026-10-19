@@ -86,6 +86,8 @@ Checks forecast lead times, data splits, and SST-derived indices, then compares 
 
 Outputs in `data/evaluation/`: `metrics.csv` (main results), `monthly_errors.csv`, `spatial_errors.nc`, and four comparison plots in `figures/`.
 
+The final forecast files (`data/model/forecasts.nc` and `data/model/forecast_indices.csv`) and evaluation results can be committed to Git. Raw data, intermediate datasets, and training artifacts are ignored and remain local.
+
 Use `--help` with any script to see its options. Add `--overwrite` when rerunning a step to replace existing outputs.
 
 ## 4. Experimental results
