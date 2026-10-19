@@ -212,14 +212,11 @@ def make_figures(ds, metrics, spatial_errors, output):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=__doc__, add_help=False)
     parser.add_argument("--input",type=Path,default=ROOT/"data/model/forecasts.nc")
     parser.add_argument("--output-dir",type=Path,default=ROOT/"data/evaluation")
-    parser.add_argument("--overwrite",action="store_true")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO,format="%(levelname)s: %(message)s")
-    if not args.overwrite and any((args.output_dir/name).exists() for name in OUTPUTS):
-        parser.error("Evaluation outputs already exist; use --overwrite or another --output-dir")
     started = perf_counter()
     LOG.info("Loading forecasts and checking lead times, splits, and SST-derived indices ...")
     with xr.open_dataset(args.input,chunks=None) as source:

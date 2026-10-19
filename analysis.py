@@ -25,10 +25,6 @@ LOG = logging.getLogger(__name__)
 MONTHLY_INDICES = ("nino12", "nino3", "nino34", "nino4", "relative_nino34")
 EVENT_COLUMNS = ["phase", "start_month", "end_month", "duration_months", "peak_month",
                  "peak_index_degC", "mean_index_degC", "left_censored", "right_censored"]
-OUTPUTS = ("index_statistics.csv", "events.csv", "event_summary.csv", "spectrum.csv",
-           "autocorrelation.csv", "cycle_summary.csv", "enso_composites.nc", "analysis_metadata.json",
-           "figures/index_timeseries.png", "figures/enso_variability.png",
-           "figures/event_statistics.png", "figures/enso_composites.png")
 
 
 def month_labels(time: xr.DataArray) -> list[str]:
@@ -278,7 +274,7 @@ def make_figures(indices, events, state, spectra, correlations, composites, outp
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=__doc__, add_help=False)
     parser.add_argument("--indices", type=Path, default=ROOT / "data/processed/enso_indices.nc")
     parser.add_argument("--fields", type=Path, default=ROOT / "data/processed/pacific_ssta.nc")
     parser.add_argument("--output-dir", type=Path, default=ROOT / "data/analysis")
@@ -289,17 +285,12 @@ def main(argv=None):
     parser.add_argument("--min-duration", type=int, default=5)
     parser.add_argument("--segment-years", type=int, default=40, help="Welch segment length, capped to record length")
     parser.add_argument("--max-lag", type=int, default=120, help="Maximum autocorrelation lag in months")
-    parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     if not np.isfinite(args.threshold) or args.threshold <= 0 or args.min_duration < 1:
         parser.error("--threshold must be positive and --min-duration >= 1")
     if args.segment_years < 2 or args.max_lag < 0:
         parser.error("--segment-years must be >= 2 and --max-lag >= 0")
-    if not args.overwrite:
-        existing = [str(args.output_dir / name) for name in OUTPUTS if (args.output_dir / name).exists()]
-        if existing:
-            parser.error(f"Outputs exist: {existing}; use --overwrite or another --output-dir")
     started = perf_counter()
     LOG.info("Loading preprocessed indices and anomaly fields ...")
     with xr.open_dataset(args.indices, chunks=None) as source:
@@ -350,7 +341,7 @@ def main(argv=None):
     for frame, name in ((stats, "index_statistics.csv"), (events, "events.csv"), (event_summary, "event_summary.csv"),
                         (spectrum, "spectrum.csv"), (autocorrelation, "autocorrelation.csv"), (cycles, "cycle_summary.csv")):
         write_table(frame, args.output_dir / name)
-    write_netcdf(composites, args.output_dir / "enso_composites.nc", args.overwrite)
+    write_netcdf(composites, args.output_dir / "enso_composites.nc")
     (args.output_dir / "analysis_metadata.json").write_text(json.dumps(metadata, indent=2, ensure_ascii=False, allow_nan=False)+"\n")
     make_figures(indices, events, state, spectrum, autocorrelation, composites,
                  args.output_dir / "figures", args.event_index, args.threshold)

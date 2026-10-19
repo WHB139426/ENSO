@@ -335,7 +335,7 @@ def write_indices(forecasts: xr.Dataset, path: Path):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=__doc__, add_help=False)
     parser.add_argument("--input",type=Path,default=ROOT / "data/raw" / f"{MODEL}_historical.nc")
     parser.add_argument("--output-dir",type=Path,default=ROOT / "data/model")
     for name,default in (("train-start","1850-01"),("train-end","1979-12"),("validation-end","1994-12"),("test-end","2014-12")):
@@ -348,7 +348,6 @@ def main(argv=None):
     parser.add_argument("--alphas",default="0.1,1,10,100",help="Comma-separated positive ridge penalties")
     parser.add_argument("--seed",type=int,default=42)
     parser.add_argument("--threads",type=int,default=4)
-    parser.add_argument("--overwrite",action="store_true")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO,format="%(levelname)s: %(message)s")
     try:
@@ -359,8 +358,6 @@ def main(argv=None):
         config.validate()
     except ValueError as exc:
         parser.error(str(exc))
-    if not args.overwrite and any((args.output_dir/name).exists() for name in OUTPUTS):
-        parser.error("Model outputs already exist; use --overwrite or another --output-dir")
     started = perf_counter()
     LOG.info("Loading SST cache %s",args.input)
     with xr.open_dataset(args.input,chunks=None) as cache, threadpool_limits(limits=config.threads):

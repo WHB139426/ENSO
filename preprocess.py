@@ -175,9 +175,7 @@ def compute_indices(anomalies: xr.Dataset) -> xr.Dataset:
     return ds
 
 
-def write_indices_csv(indices: xr.Dataset, path: Path, overwrite: bool = False):
-    if path.exists() and not overwrite:
-        raise FileExistsError(f"{path} exists; use --overwrite.")
+def write_indices_csv(indices: xr.Dataset, path: Path):
     path.parent.mkdir(parents=True, exist_ok=True)
     indices = indices.compute()
     with tempfile.NamedTemporaryFile(mode="w", dir=path.parent, suffix=".csv",
@@ -233,7 +231,7 @@ def plot_diagnostics(cache: xr.Dataset, anomalies: xr.Dataset,
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=__doc__, add_help=False)
     parser.add_argument("--input", type=Path,
                         default=ROOT / "data" / "raw" / f"{MODEL}_historical.nc")
     parser.add_argument("--output-dir", type=Path, default=ROOT / "data" / "processed")
@@ -242,7 +240,6 @@ def main(argv=None):
     parser.add_argument("--fit-until", help="Training cutoff YYYY-MM; reject later baseline data")
     parser.add_argument("--climatology", type=Path, help="Apply a previously fitted climatology")
     parser.add_argument("--plots", action="store_true", help="Also save three diagnostic PNGs")
-    parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     started = perf_counter()
@@ -253,10 +250,6 @@ def main(argv=None):
         files.append("monthly_climatology.nc")
     if args.plots:
         files += ["figures/sst_example.png", "figures/ssta_example.png", "figures/enso_timeseries.png"]
-    if not args.overwrite:
-        existing = [str(args.output_dir / name) for name in files if (args.output_dir / name).exists()]
-        if existing:
-            parser.error(f"Output already exists: {existing}; use --overwrite or another --output-dir")
     # The already-cropped historical cache is about 91 MiB uncompressed.
     # Load it once: monthly GroupBy on tiny Dask chunks creates a large task
     # graph and repeated index reductions otherwise reread the same data.
@@ -285,13 +278,13 @@ def main(argv=None):
         LOG.info("Computing the four Nino indices and three-month means ...")
         indices = compute_indices(anomalies).compute()
         LOG.info("Saving anomaly fields to %s ...", args.output_dir / "pacific_ssta.nc")
-        write_netcdf(anomalies, args.output_dir / "pacific_ssta.nc", args.overwrite)
+        write_netcdf(anomalies, args.output_dir / "pacific_ssta.nc")
         LOG.info("Saving index NetCDF and CSV files ...")
-        write_netcdf(indices, args.output_dir / "enso_indices.nc", args.overwrite)
-        write_indices_csv(indices, args.output_dir / "enso_indices.csv", args.overwrite)
+        write_netcdf(indices, args.output_dir / "enso_indices.nc")
+        write_indices_csv(indices, args.output_dir / "enso_indices.csv")
         if not args.climatology:
             LOG.info("Saving monthly climatology ...")
-            write_netcdf(climate, args.output_dir / "monthly_climatology.nc", args.overwrite)
+            write_netcdf(climate, args.output_dir / "monthly_climatology.nc")
         if args.plots:
             LOG.info("Generating diagnostic figures ...")
             plot_diagnostics(cache, anomalies, indices, args.output_dir / "figures")

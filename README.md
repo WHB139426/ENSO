@@ -88,7 +88,7 @@ Outputs in `data/evaluation/`: `metrics.csv` (main results), `monthly_errors.csv
 
 The final forecast files (`data/model/forecasts.nc` and `data/model/forecast_indices.csv`) and evaluation results can be committed to Git. Raw data, intermediate datasets, and training artifacts are ignored and remain local.
 
-Use `--help` with any script to see its options. Add `--overwrite` when rerunning a step to replace existing outputs.
+Rerunning a script replaces its existing output files.
 
 ## 4. Experimental results
 

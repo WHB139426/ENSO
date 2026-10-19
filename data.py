@@ -306,12 +306,10 @@ def open_cmip6(experiment: str = "historical", model: str = MODEL,
     return sst, area, provenance
 
 
-def write_netcdf(ds: xr.Dataset, path: str | Path, overwrite: bool = False) -> Path:
+def write_netcdf(ds: xr.Dataset, path: str | Path) -> Path:
     """Compressed NetCDF written via a temporary file, preserving an existing cache on error."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    if path.exists() and not overwrite:
-        raise FileExistsError(f"{path} already exists; use --overwrite to replace it.")
     with tempfile.NamedTemporaryFile(dir=path.parent, suffix=".nc", delete=False) as handle:
         temporary = Path(handle.name)
     try:
@@ -326,7 +324,7 @@ def write_netcdf(ds: xr.Dataset, path: str | Path, overwrite: bool = False) -> P
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=__doc__, add_help=False)
     parser.add_argument("--model", default=MODEL)
     parser.add_argument("--member", default=MEMBER)
     parser.add_argument("--experiment", choices=EXPERIMENTS, default="historical")
@@ -338,7 +336,6 @@ def main(argv=None):
     parser.add_argument("--lat-max", type=float, default=20)
     parser.add_argument("--catalog", default=CATALOG)
     parser.add_argument("--output", type=Path, help="Cache path; default data/raw/MODEL_EXPERIMENT.nc")
-    parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     historical = args.experiment == "historical"
@@ -348,8 +345,6 @@ def main(argv=None):
         parser.error("--start must not be after --end")
     region = Region(args.lon_min, args.lon_max, args.lat_min, args.lat_max)
     output = args.output or ROOT / "data" / "raw" / f"{args.model}_{args.experiment}.nc"
-    if output.exists() and not args.overwrite:
-        parser.error(f"{output} already exists; use --overwrite or another --output")
     sst, area, provenance = open_cmip6(args.experiment, args.model, args.member, args.catalog)
     try:
         ds = prepare_data(sst, area, region, start, end)
@@ -358,7 +353,7 @@ def main(argv=None):
                  ds.sizes["time"], dict(ds.tos.sizes), output)
         from dask.diagnostics import ProgressBar
         with ProgressBar():
-            write_netcdf(ds, output, args.overwrite)
+            write_netcdf(ds, output)
     finally:
         sst.close()
         area.close()
