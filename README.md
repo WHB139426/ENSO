@@ -34,19 +34,59 @@ Replace `/path/to/project` with your project directory. Activate `enso-project` 
 
 ## 3. Run
 
-Run the scripts in order:
+Run the following steps in order. All generated files are saved under `data/`.
+
+**Step 1: Download the data**
 
 ```bash
 python data.py
+```
+
+Downloads monthly historical SST from IPSL-CM6A-LR, extracts the tropical Pacific, and retains grid-cell areas and the tropical mean SST needed for relative anomalies.
+
+Output: `data/raw/IPSL-CM6A-LR_historical.nc`, the local cache used by later scripts. This step requires internet access.
+
+**Step 2: Preprocess SST and calculate indices**
+
+```bash
 python preprocess.py --plots
+```
+
+Calculates monthly climatology, SST anomalies, relative anomalies with the tropical background removed, Niño indices, and three-month index averages. The `--plots` option generates diagnostic figures.
+
+Outputs in `data/processed/`: `pacific_ssta.nc` (anomaly fields), `monthly_climatology.nc`, `enso_indices.nc`, `enso_indices.csv`, and SST/index plots in `figures/`.
+
+**Step 3: Analyze simulated ENSO**
+
+```bash
 python analysis.py
+```
+
+Summarizes ENSO variability, identifies warm and cold events, estimates event durations and dominant periods, and computes autocorrelations and event composite maps.
+
+Outputs in `data/analysis/`: statistics and event tables, `spectrum.csv`, `autocorrelation.csv`, `enso_composites.nc`, and four summary plots in `figures/`.
+
+**Step 4: Train the forecasting model**
+
+```bash
 python model.py
+```
+
+Uses six months of SST history to forecast three months ahead with PCA and ridge regression. It selects model settings on the validation set, generates validation and test forecasts, and includes a persistence baseline. Niño3.4 indices are calculated from the forecast SST fields.
+
+Outputs in `data/model/`: `model.joblib` (fitted model), `forecasts.nc` (forecast SST fields, reference fields, and indices), `forecast_indices.csv`, `training_climatology.nc`, and tables recording validation scores and sample splits.
+
+**Step 5: Evaluate the forecasts**
+
+```bash
 python evaluate.py
 ```
 
-The initial data download requires internet access. Use `--help` to see script options or `--overwrite` to replace existing outputs.
+Checks forecast lead times, data splits, and SST-derived indices, then compares the model with persistence using SST errors, Niño3.4 errors and correlations, and forecast skill.
 
-Main forecast outputs are `data/model/forecasts.nc` (SST fields and indices) and `data/model/forecast_indices.csv`. Evaluation results are saved under `data/evaluation/`.
+Outputs in `data/evaluation/`: `metrics.csv` (main results), `monthly_errors.csv`, `spatial_errors.nc`, and four comparison plots in `figures/`.
+
+Use `--help` with any script to see its options. Add `--overwrite` when rerunning a step to replace existing outputs.
 
 ## 4. Experimental results
 
