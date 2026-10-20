@@ -176,7 +176,8 @@ def make_forecast_dataset(bundle, initialization_times, target_times, splits, an
     return ds
 
 
-def train_model(cache: xr.Dataset, config: ForecastConfig):
+def prepare_training_data(cache: xr.Dataset, config: ForecastConfig):
+    """Fit the training-only spatial transforms once, independently of lead."""
     config.validate()
     cache = select_months(cache, config.train_start, config.test_end).load()
     validate_cache(cache)
@@ -185,7 +186,6 @@ def train_model(cache: xr.Dataset, config: ForecastConfig):
     region = Region(**json.loads(cache.attrs["region_bounds"]))
     if not bool(region.mask(xr.DataArray([-5.,5.]),xr.DataArray([190.,240.])).all()):
         raise ValueError("Cached region must contain the complete Niño3.4 box.")
-    origins, targets, split, samples = sample_splits(cache.time, config)
     codes = validate_monthly_time(cache.time)
     train_months = codes <= month_number(config.train_end)
     base_end = config.base_end or config.train_end
@@ -214,6 +214,39 @@ def train_model(cache: xr.Dataset, config: ForecastConfig):
     pca.fit(weighted[train_months])
     scores = pca.transform(weighted)
     del weighted
+    return {"cache": cache, "climate": climate, "mask": mask,
+            "relative": relative, "background": background, "area": area,
+            "sqrt_weights": sqrt_weights, "pca": pca, "scores": scores,
+            "candidates": candidates, "train_months": train_months,
+            "preparation_config": asdict(config)}
+
+
+def train_model(cache: xr.Dataset, config: ForecastConfig, *, prepared=None,
+                validation_targets=None, test_targets=None):
+    """Fit a lead-specific model, optionally reusing frozen training transforms.
+
+    Target-month filters support a common verification window across leads.
+    Excluded verification samples never participate in fitting or tuning.
+    """
+    config.validate()
+    prepared = prepare_training_data(cache, config) if prepared is None else prepared
+    for key in ("train_start", "train_end", "validation_end", "test_end",
+                "base_start", "base_end", "components", "seed"):
+        if prepared["preparation_config"][key] != asdict(config)[key]:
+            raise ValueError(f"Prepared training data does not match {key}.")
+    cache, climate, mask = (prepared[key] for key in ("cache", "climate", "mask"))
+    relative, background, area = (prepared[key] for key in ("relative", "background", "area"))
+    sqrt_weights, pca, scores = (prepared[key] for key in ("sqrt_weights", "pca", "scores"))
+    candidates, train_months = prepared["candidates"], prepared["train_months"]
+    base_start, base_end = climate.attrs["base_start"], climate.attrs["base_end"]
+    origins, targets, split, samples = sample_splits(cache.time, config)
+    codes = validate_monthly_time(cache.time)
+    for name, allowed in (("validation", validation_targets), ("test", test_targets)):
+        if allowed is not None:
+            split[(split == name) & ~np.isin(codes[targets], allowed)] = "excluded"
+        if np.count_nonzero(split == name) < 2:
+            raise ValueError(f"Not enough common {name} target months.")
+    samples["split"] = split
     train = split == "train"
     validation = split == "validation"
     valid_target_anomaly = relative[targets[validation]]+background[targets[validation],None]

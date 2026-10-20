@@ -23,13 +23,17 @@ Replace `/path/to/project` with your project directory. Activate `enso-project` 
 ├── analysis.py               # Characterize simulated ENSO
 ├── model.py                  # Train persistence and PCA + ridge models
 ├── evaluate.py               # Evaluate forecasts and generate figures
+├── brinda_model.py           # Single-frame PCA + ridge setting adapted from Brinda's notebook
+├── compare.py                # Compare two settings and two baselines at 1–24 month leads
 ├── requirements.txt          # Python dependencies
+├── report/                   # Group 2 LaTeX report, PDF, and figures
 └── data/                     # Generated data and results
     ├── raw/                  # Cached SST and tropical background
     ├── processed/            # Climatologies, anomalies, and indices
     ├── analysis/             # ENSO statistics and composite maps
     ├── model/                # Saved model, forecast SST, and indices
-    └── evaluation/           # Metrics and evaluation figures
+    ├── evaluation/           # Original three-month metrics and figures
+    └── comparison/           # Shared-target comparison, forecasts, and lead-skill curves
 ```
 
 ## 3. Run
@@ -86,17 +90,38 @@ Checks forecast lead times, data splits, and SST-derived indices, then compares 
 
 Outputs in `data/evaluation/`: `metrics.csv` (main results), `monthly_errors.csv`, `spatial_errors.nc`, and four comparison plots in `figures/`.
 
-The final forecast files (`data/model/forecasts.nc` and `data/model/forecast_indices.csv`) and evaluation results can be committed to Git. Raw data, intermediate datasets, and training artifacts are ignored and remain local.
+**Step 6: Compare both settings and two baselines**
 
-Rerunning a script replaces its existing output files.
+```bash
+python compare.py
+python report/make_figures.py
+```
+
+Compares Brinda's single-frame PCA + pixelwise ridge setting with Haibo's six-month relative-SST setting, plus persistence and a four-index linear inverse model (LIM). Brinda's method is adapted to the shared Pacific region and training-only preprocessing; this is not a reproduction of her original global-domain scores. Each lead from 1 to 24 months has its own validation-selected regression model, while training-only PCA transforms are shared across leads within each setting.
+
+All methods use the same validation targets (1982–1994) and test targets (1997–2014), regardless of lead. Brinda's setting selects by validation Niño3.4 correlation; Haibo's selects by validation SST RMSE. LIM predicts indices only, so no SST RMSE is reported for it.
+
+Outputs in `data/comparison/`: `forecasts.nc` (three-month SST fields for the three field methods and indices for all four methods), `forecast_indices.csv` (all leads), `metrics.csv`, `selected_settings.csv`, validation/split audit tables, metadata, and plots in `figures/`. The saved `models.joblib` contains both fitted three-month models and LIM parameters. The second command updates the figures used in the LaTeX report; compilation instructions are in `report/README.md`.
+
 
 ## 4. Experimental results
 
-The model uses six months of history to forecast three months ahead. Training covers 1850–1979, and validation covers 1980–1994. Held-out targets cover April 1995–December 2014, with 237 monthly forecasts after boundary exclusions. Validation selected 20 PCA components and a ridge penalty of `0.1`.
+The original three-month experiment below uses six months of history. Training covers 1850–1979, and validation covers 1980–1994. Held-out targets cover April 1995–December 2014, with 237 monthly forecasts after boundary exclusions. Validation selected 20 PCA components and a ridge penalty of `0.1`. The shared-target comparison in `data/comparison/metrics.csv` uses 216 test months instead, so its scores should be read separately.
 
 | Method | SST RMSE (°C) | Niño3.4 RMSE (°C) | Niño3.4 correlation |
 | --- | ---: | ---: | ---: |
 | Persistence | 0.7085 | 0.8085 | 0.8009 |
 | PCA + ridge regression | 0.5154 | 0.5601 | 0.9154 |
 
-Source: [data/evaluation/metrics.csv](data/evaluation/metrics.csv). These results evaluate CMIP6 simulation forecasts; the real-world forecast requires the instructor-provided hindcast data.
+Source: [data/evaluation/metrics.csv](data/evaluation/metrics.csv).
+
+The shared-target comparison uses the same 216 test targets (1997–2014) at every lead. Its three-month results are:
+
+| Method | SST RMSE (°C) | Niño3.4 RMSE (°C) | Niño3.4 correlation |
+| --- | ---: | ---: | ---: |
+| Persistence | 0.7169 | 0.8233 | 0.8062 |
+| LIM (4 indices; index only) | — | 0.7153 | 0.8427 |
+| Single-frame ridge (Brinda setting, adapted) | 0.5362 | 0.5364 | 0.9192 |
+| Lagged relative ridge (Haibo setting) | 0.5177 | 0.5597 | 0.9202 |
+
+Source: [data/comparison/metrics.csv](data/comparison/metrics.csv). The four lead-skill curves are in `data/comparison/figures/lead_skill.png`. These are CMIP6 simulation forecasts; the instructor-data prediction remains pending.

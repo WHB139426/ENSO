@@ -1,0 +1,90 @@
+{
+  "config": {
+    "train_start": "1850-01",
+    "train_end": "1979-12",
+    "validation_end": "1994-12",
+    "test_end": "2014-12",
+    "base_start": null,
+    "base_end": null,
+    "lookback": 6,
+    "lead": 3,
+    "components": [
+      10,
+      20,
+      40,
+      80
+    ],
+    "alphas": [
+      0.1,
+      1.0,
+      10.0,
+      100.0
+    ],
+    "seed": 42,
+    "threads": 4
+  },
+  "max_lead_months": 24,
+  "saved_field_lead_months": 3,
+  "methods": {
+    "persistence": "Persistence",
+    "lim": "LIM (4 indices)",
+    "single_frame_ridge": "Single-frame ridge (Brinda)",
+    "lagged_relative_ridge": "Lagged relative ridge (Haibo)"
+  },
+  "field_methods": [
+    "persistence",
+    "single_frame_ridge",
+    "lagged_relative_ridge"
+  ],
+  "common_targets": {
+    "validation": {
+      "start": "1982-01",
+      "end": "1994-12",
+      "count": 156
+    },
+    "test": {
+      "start": "1997-01",
+      "end": "2014-12",
+      "count": 216
+    }
+  },
+  "base_start": "1950-01",
+  "base_end": "1979-12",
+  "single_frame_source": "Brinda Puri, brinda/ECS289G_ENSO_project.ipynb, cells 29\u201352",
+  "adaptations": [
+    "Common Pacific domain instead of the notebook's global domain",
+    "Training-only climatology, frozen training ocean mask, and training-period PCA",
+    "Shared chronological cutoffs and common target months across all leads",
+    "Shared maximum-rank PCA with leading-component prefixes for each setting"
+  ],
+  "single_frame_candidates": {
+    "components": [
+      5,
+      10,
+      15,
+      20,
+      30,
+      50
+    ],
+    "alphas": [
+      0.1,
+      1.0,
+      10.0,
+      100.0,
+      1000.0,
+      10000.0
+    ]
+  },
+  "selection": {
+    "single_frame_ridge": "Maximum validation monthly Nino3.4 correlation",
+    "lagged_relative_ridge": "Minimum validation area-weighted SST RMSE"
+  },
+  "lim": {
+    "definition": "Uncentered least-squares one-month propagator on four monthly training indices; iterate G^lead",
+    "spectral_radius": 0.9208467047616349,
+    "scope": "Index-only baseline"
+  },
+  "target_consistency": "All methods and leads use identical target months, monthly unsmoothed indices, climatology and fixed mask",
+  "history_note": "Only initialization dates must follow the preceding cutoff; known earlier input history remains causal",
+  "scope": "Simulation comparison only; instructor-data prediction remains pending"
+}

@@ -7,10 +7,17 @@
 /data/*
 !/data/model/
 !/data/evaluation/
+!/data/comparison/
 
 # Keep final forecast fields and indices; ignore training artifacts.
 /data/model/*
 !/data/model/forecasts.nc
 !/data/model/forecast_indices.csv
+
+# Publish comparison forecasts, metrics, and figures, but keep fitted models local.
+/data/comparison/models.joblib
+
+report/*
+brinda/*
 
 update.sh
