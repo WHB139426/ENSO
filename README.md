@@ -26,7 +26,6 @@ Replace `/path/to/project` with your project directory. Activate `enso-project` 
 ├── brinda_model.py           # Single-frame PCA + ridge setting adapted from Brinda's notebook
 ├── compare.py                # Compare two settings and two baselines at 1–24 month leads
 ├── requirements.txt          # Python dependencies
-├── report/                   # Group 2 LaTeX report, PDF, and figures
 └── data/                     # Generated data and results
     ├── raw/                  # Cached SST and tropical background
     ├── processed/            # Climatologies, anomalies, and indices
